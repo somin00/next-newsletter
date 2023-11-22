@@ -1,10 +1,16 @@
-import { connectToDB } from "../../../lib/db";
+import { connectToDB, insertDocument, getAllDocuments } from "../../../lib/db";
 
 export default async function handler(req, res) {
   const { eventId } = req.query;
 
-  const client = await connectToDB();
-  const db = await client.db();
+  let client = null;
+
+  try {
+    client = await connectToDB();
+  } catch (error) {
+    res.status(500).json({ message: "데이터베이스 연결에 실패했습니다." });
+    return;
+  }
 
   if (req.method === "POST") {
     const { email, name, text } = req.body;
@@ -24,24 +30,29 @@ export default async function handler(req, res) {
       eventId,
     };
 
-    const result = await db.collection("comments").insertOne(newComment);
-
-    if (result) newComment._id = result.insertedId;
-
-    res.status(201).json({
-      message: "댓글 저장 완료",
-      newComment,
-    });
+    let result = null;
+    try {
+      result = await insertDocument(client, "comments", newComment);
+      newComment._id = result.insertedId;
+      res.status(201).json({
+        message: "댓글 저장 완료",
+        newComment,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "댓글 저장 실패" });
+    }
   }
 
   if (req.method === "GET") {
-    const client = await connectToDB();
-    const db = await client.db();
-    const comments = await db.collection("comments").find({ eventId: eventId }).sort({ _id: -1 }).toArray();
-
-    res.status(200).json({
-      message: "댓글 요청 성공",
-      comments,
-    });
+    try {
+      const comments = await getAllDocuments(client, "comments", eventId, { _id: -1 });
+      res.status(200).json({
+        message: "댓글 요청 성공",
+        comments,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "댓글 로딩에 실패했습니다." });
+    }
   }
+  client.close();
 }
