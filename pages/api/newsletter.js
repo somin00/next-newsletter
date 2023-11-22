@@ -1,4 +1,8 @@
-export default function handler(req, res) {
+import { connectToDB } from "../../lib/db";
+
+const DB_URL = process.env.NEXT_PUBLIC_MONGO_URL;
+
+export default async function handler(req, res) {
   if (req.method !== "POST") return;
 
   const { email } = req.body;
@@ -10,8 +14,14 @@ export default function handler(req, res) {
     return;
   }
 
+  const client = await connectToDB();
+  const db = await client.db();
+  const result = await db.collection("emails").insertOne({ email: email });
+
+  client.close();
+
   res.status(201).json({
     message: "뉴스 레터를 구독했습니다.",
-    email,
+    userEmail: email,
   });
 }
