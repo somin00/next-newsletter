@@ -19,9 +19,8 @@ function NewsletterRegistration() {
 
     if (response.ok) {
       emailRef.current.value = "";
+      alert(`${data.userEmail} 사용자 등록 완료`);
     }
-
-    console.log(data.email);
   };
 
   return (
